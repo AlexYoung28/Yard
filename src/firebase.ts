@@ -1,32 +1,59 @@
+// src/firebase.ts
+import { initializeApp, getApp, getApps } from "firebase/app";
+import {
+  getAuth,
+  signInAnonymously,
+  setPersistence,
+  browserLocalPersistence,
+} from "firebase/auth";
+import { getFirestore, enableIndexedDbPersistence } from "firebase/firestore";
 
-// src/firebase.js
-import { initializeApp } from "firebase/app";
-import { getAuth, signInAnonymously } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
-// Import the functions you need from the SDKs you need
-import { getAnalytics } from "firebase/analytics";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
-
-// Your web app's Firebase configuration
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+/** Read config from Vite env (client-safe). */
 const firebaseConfig = {
-  apiKey: "AIzaSyCZCXxPP1XGm1MRfGiSUOcsdVNR6Cwv1cY",
-  authDomain: "yardjobs-b8e72.firebaseapp.com",
-  projectId: "yardjobs-b8e72",
-  storageBucket: "yardjobs-b8e72.firebasestorage.app",
-  messagingSenderId: "682521902947",
-  appId: "1:682521902947:web:bb56a0840912ffe9e81d56",
-  measurementId: "G-QE2PYCGS9F"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  // Analytics is optional; only used if MEASUREMENT_ID is present.
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
 };
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const analytics = getAnalytics(app);
-const db = getFirestore(app);
+/** Singleton app (prevents double init during HMR). */
+const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 
-// Auto sign-in anonymously
-signInAnonymously(auth).catch(console.error);
+/** Auth (persist to local storage). */
+export const auth = getAuth(app);
+setPersistence(auth, browserLocalPersistence).catch(() => {
+  /* non-fatal */
+});
 
-export { db, auth };
+/** Firestore. */
+export const db = getFirestore(app);
+
+/** Optional: offline cache for Firestore (ignore multi-tab collision). */
+enableIndexedDbPersistence(db).catch(() => {
+  /* It's fine if it can't enable (multi-tab or unsupported). */
+});
+
+/** Optional: lazy Analytics init (prod + browser + supported). */
+export const initAnalytics = async () => {
+  if (!import.meta.env.PROD || typeof window === "undefined") return null;
+  const { isSupported, getAnalytics } = await import("firebase/analytics");
+  return (await isSupported()) ? getAnalytics(app) : null;
+};
+
+/** Optional: ensure anonymous auth exactly once. */
+export const ensureAnonymous = async () => {
+  if (!auth.currentUser) {
+    try {
+      await signInAnonymously(auth);
+    } catch (err) {
+      // Non-fatal; app can still run read-only if your rules allow.
+      console.warn("Anonymous sign-in failed:", err);
+    }
+  }
+};
+
+export { app };
