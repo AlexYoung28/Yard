@@ -1,0 +1,234 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Repo Housekeeping Bot <you@example.com>
+Date: Sat, 9 Aug 2025 12:34:00 +0100
+Subject: [PATCH] chore: CI, Dependabot, Prettier, editor settings, dev docs,
+ setup script and Node pin
+
+---
+ .editorconfig                       | 17 ++++++++++++++++
+ .gitattributes                      |  1 +
+ .github/dependabot.yml              | 10 +++++++++
+ .github/workflows/ci.yml            | 20 ++++++++++++++++++
+ .nvmrc                               |  1 +
+ .prettierignore                     |  4 ++++
+ .prettierrc                         |  1 +
+ docs/DEVELOPMENT.md                 | 39 +++++++++++++++++++++++++++++++++++++
+ tools/setup-dev.mjs                 | 83 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ 9 files changed, 176 insertions(+)
+ create mode 100644 .editorconfig
+ create mode 100644 .gitattributes
+ create mode 100644 .github/dependabot.yml
+ create mode 100644 .github/workflows/ci.yml
+ create mode 100644 .nvmrc
+ create mode 100644 .prettierignore
+ create mode 100644 .prettierrc
+ create mode 100644 docs/DEVELOPMENT.md
+ create mode 100644 tools/setup-dev.mjs
+
+diff --git a/.editorconfig b/.editorconfig
+new file mode 100644
+index 0000000..1111111
+--- /dev/null
++++ b/.editorconfig
+@@ -0,0 +1,17 @@
++root = true
++
++[*]
++indent_style = space
++indent_size = 2
++end_of_line = lf
++charset = utf-8
++trim_trailing_whitespace = true
++insert_final_line = true
++
++[*.md]
++trim_trailing_whitespace = false
+diff --git a/.gitattributes b/.gitattributes
+new file mode 100644
+index 0000000..1111111
+--- /dev/null
++++ b/.gitattributes
+@@ -0,0 +1 @@
++* text=auto eol=lf
+diff --git a/.github/dependabot.yml b/.github/dependabot.yml
+new file mode 100644
+index 0000000..1111111
+--- /dev/null
++++ b/.github/dependabot.yml
+@@ -0,0 +1,10 @@
++version: 2
++updates:
++  - package-ecosystem: "npm"
++    directory: "/"
++    schedule:
++      interval: "weekly"
++    open-pull-requests-limit: 5
++    commit-message:
++      prefix: "deps"
++      include: "scope"
+diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
+new file mode 100644
+index 0000000..1111111
+--- /dev/null
++++ b/.github/workflows/ci.yml
+@@ -0,0 +1,20 @@
++name: CI
++on:
++  push:
++  pull_request:
++jobs:
++  build:
++    runs-on: ubuntu-latest
++    steps:
++      - uses: actions/checkout@v4
++      - uses: actions/setup-node@v4
++        with:
++          node-version: 20
++          cache: npm
++      - run: npm ci
++      - run: npm run lint --if-present
++      - run: npm run build
++      - name: Prettier check
++        run: |
++          if [ -f ".prettierrc" ]; then npm run prettier:check || true; fi
+diff --git a/.nvmrc b/.nvmrc
+new file mode 100644
+index 0000000..1111111
+--- /dev/null
++++ b/.nvmrc
+@@ -0,0 +1 @@
++20
+diff --git a/.prettierignore b/.prettierignore
+new file mode 100644
+index 0000000..1111111
+--- /dev/null
++++ b/.prettierignore
+@@ -0,0 +1,4 @@
++node_modules
++dist
++.vite
++coverage
+diff --git a/.prettierrc b/.prettierrc
+new file mode 100644
+index 0000000..1111111
+--- /dev/null
++++ b/.prettierrc
+@@ -0,0 +1 @@
++{}
+diff --git a/docs/DEVELOPMENT.md b/docs/DEVELOPMENT.md
+new file mode 100644
+index 0000000..1111111
+--- /dev/null
++++ b/docs/DEVELOPMENT.md
+@@ -0,0 +1,39 @@
++# Development Quickstart
++
++## Requirements
++- Node 20+ (see `.nvmrc`)
++- PNPM/NPM/Yarn (examples assume NPM)
++
++## Environment
++1. Copy `.env.example` → `.env.local` (do **not** commit real values).
++2. Ensure all client vars start with `VITE_` so Vite exposes them.
++
++## Common scripts
++- `npm run dev` — start Vite dev server
++- `npm run build` — production build
++- `npm run preview` — preview build locally
++- `npm run lint` — run ESLint
++- `npm run format` — format with Prettier
++- `npm run prettier:check` — verify formatting
++
++## CI
++GitHub Actions runs on every push/PR: install deps, lint (if present), and build.
++
++## Git hooks
++We use Husky + lint-staged to format and lint changed files on commit.  
++Run `node tools/setup-dev.mjs` once to install and configure them.
++
++## Firebase
++- SPA routing is handled by Hosting rewrites to `/index.html`.
++- Keep Firestore rules strict; restrict writes to authenticated roles.
++
++## Conventions
++- LF line endings, UTF-8, 2-space indent (`.editorconfig`).
++- Prefer TypeScript for new code; keep components in `src/`.
+diff --git a/tools/setup-dev.mjs b/tools/setup-dev.mjs
+new file mode 100644
+index 0000000..1111111
+--- /dev/null
++++ b/tools/setup-dev.mjs
+@@ -0,0 +1,83 @@
++#!/usr/bin/env node
++/**
++ * One-time setup script:
++ * - ensures package.json has engines, scripts, lint-staged
++ * - installs dev deps: prettier, eslint, husky, lint-staged
++ * - initializes Husky and adds a pre-commit hook
++ */
++import fs from "fs";
++import path from "path";
++import { execSync } from "child_process";
++
++const root = process.cwd();
++const pkgPath = path.join(root, "package.json");
++if (!fs.existsSync(pkgPath)) {
++  console.error("package.json not found — run this from the repo root.");
++  process.exit(1);
++}
++const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf8"));
++
++// 1) engines
++pkg.engines = { ...(pkg.engines || {}), node: ">=20" };
++
++// 2) scripts
++pkg.scripts = {
++  dev: pkg.scripts?.dev || "vite",
++  build: pkg.scripts?.build || "vite build",
++  preview: pkg.scripts?.preview || "vite preview",
++  lint: pkg.scripts?.lint || "eslint .",
++  format: "prettier -w .",
++  "prettier:check": "prettier -c .",
++  ...(pkg.scripts || {}),
++};
++
++// 3) lint-staged
++pkg["lint-staged"] = pkg["lint-staged"] || {
++  "*.{js,ts,jsx,tsx,css,md,json}": ["prettier -w", "eslint --fix"],
++};
++
++// 4) postinstall for husky (append if necessary)
++const existingPostinstall = pkg.scripts?.postinstall || "";
++if (!/husky/.test(existingPostinstall)) {
++  pkg.scripts.postinstall = existingPostinstall
++    ? `${existingPostinstall} && husky`
++    : "husky";
++}
++
++fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + "\n", "utf8");
++console.log("Updated package.json (engines, scripts, lint-staged, postinstall).");
++
++// 5) install dev dependencies
++try {
++  execSync("npm i -D prettier eslint husky lint-staged", { stdio: "inherit" });
++} catch (e) {
++  console.error("Dev dependency install failed. Install manually and re-run.");
++  process.exit(1);
++}
++
++// 6) init husky and add pre-commit
++try {
++  execSync("npx husky init", { stdio: "inherit" });
++} catch (e) {
++  // husky may already be initialised; continue
++}
++
++const hookPath = path.join(root, ".husky", "pre-commit");
++fs.writeFileSync(hookPath, "npx lint-staged\n", "utf8");
++fs.chmodSync(hookPath, 0o755);
++console.log("Husky pre-commit hook created: runs lint-staged.");
++
++console.log("\nDone! Next steps:");
++console.log("- Restart your editor if it complains about line endings or formatting.");
++console.log("- Commit any reformatting changes that Prettier makes.");
++console.log("- Push your branch and open a PR.");
