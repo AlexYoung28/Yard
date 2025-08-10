@@ -1,12 +1,4 @@
-// src/App.jsx — v4.2.5 (Final)
-
-import React, {
-  useState,
-  useEffect,
-  useRef,
-  useMemo,
-  useCallback,
-} from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { db } from "./firebase";
 import { doc, getDoc, setDoc, onSnapshot } from "firebase/firestore";
 import PwaInstallPrompt from "./components/PwaInstallPrompt.jsx";
@@ -35,12 +27,19 @@ import {
 const prefersDark = () =>
   typeof window !== "undefined" &&
   window.matchMedia?.("(prefers-color-scheme: dark)").matches;
-const getInitialTheme = () =>
-  localStorage.getItem("theme") || (prefersDark() ? "dark" : "light");
+
+const getInitialTheme = () => {
+  try {
+    return localStorage.getItem("theme") || (prefersDark() ? "dark" : "light");
+  } catch {
+    return "light";
+  }
+};
 
 function useToast() {
   const [msg, setMsg] = useState("");
   const timer = useRef();
+  useEffect(() => () => clearTimeout(timer.current), []);
   const show = (m) => {
     clearTimeout(timer.current);
     setMsg(m);
@@ -49,11 +48,23 @@ function useToast() {
   return {
     show,
     Toast: msg && (
-      <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 px-4 py-2 bg-black/80 text-white rounded-lg shadow-lg text-sm">
+      <div className="fixed bottom-4 left-1/2 -translate-x-1/2 px-4 py-2 bg-black/80 text-white rounded-lg shadow-lg text-sm">
         {msg}
       </div>
     ),
   };
+}
+
+/** Debounce wrapper for Firestore writes */
+function useDebouncedSave(delay = 500) {
+  const t = useRef();
+  return useCallback(
+    (fn) => {
+      clearTimeout(t.current);
+      t.current = setTimeout(fn, delay);
+    },
+    [delay],
+  );
 }
 
 export default function App() {
@@ -61,7 +72,11 @@ export default function App() {
   const [theme, setTheme] = useState(getInitialTheme);
   useEffect(() => {
     document.documentElement.classList.toggle("dark", theme === "dark");
-    localStorage.setItem("theme", theme);
+    try {
+      localStorage.setItem("theme", theme);
+    } catch (e) {
+      console.warn("Failed to persist theme", e);
+    }
   }, [theme]);
 
   // Toast
@@ -99,6 +114,8 @@ export default function App() {
     savingTimer.current = setTimeout(() => setSaveBusy(false), 800);
   };
 
+  const debouncedSave = useDebouncedSave(500);
+
   // Firestore refs
   const listsRef = useMemo(() => doc(db, "schedules", "lists"), []);
   const feedingRef = useMemo(() => doc(db, "schedules", "feedingSchedule"), []);
@@ -121,45 +138,49 @@ export default function App() {
         } else {
           await setDoc(listsRef, { staff, horses, dutyStaff }, { merge: true });
         }
-        unsub = onSnapshot(listsRef, (s) => {
-          if (s.exists()) {
-            const d = s.data();
-            if (d.staff) setStaff(d.staff);
-            if (d.horses) setHorses(d.horses);
-            if (d.dutyStaff) setDutyStaff(d.dutyStaff);
-            setListsLoaded(true);
-          }
-        });
+        unsub = onSnapshot(
+          listsRef,
+          (s) => {
+            if (s.exists()) {
+              const d = s.data();
+              if (d.staff) setStaff(d.staff);
+              if (d.horses) setHorses(d.horses);
+              if (d.dutyStaff) setDutyStaff(d.dutyStaff);
+              setListsLoaded(true);
+            }
+          },
+          (err) => console.error(err),
+        );
       } catch (e) {
         console.error(e);
       }
     })();
     return () => unsub && unsub();
   }, [listsRef]);
+
   useEffect(() => {
     if (!listsLoaded) return;
-    const id = setTimeout(() => {
+    debouncedSave(() => {
       flagSaving();
       setDoc(listsRef, { staff }, { merge: true }).catch(console.error);
-    }, 400);
-    return () => clearTimeout(id);
-  }, [staff, listsLoaded, listsRef]);
+    });
+  }, [staff, listsLoaded, listsRef, debouncedSave]);
+
   useEffect(() => {
     if (!listsLoaded) return;
-    const id = setTimeout(() => {
+    debouncedSave(() => {
       flagSaving();
       setDoc(listsRef, { horses }, { merge: true }).catch(console.error);
-    }, 400);
-    return () => clearTimeout(id);
-  }, [horses, listsLoaded, listsRef]);
+    });
+  }, [horses, listsLoaded, listsRef, debouncedSave]);
+
   useEffect(() => {
     if (!listsLoaded) return;
-    const id = setTimeout(() => {
+    debouncedSave(() => {
       flagSaving();
       setDoc(listsRef, { dutyStaff }, { merge: true }).catch(console.error);
-    }, 400);
-    return () => clearTimeout(id);
-  }, [dutyStaff, listsLoaded, listsRef]);
+    });
+  }, [dutyStaff, listsLoaded, listsRef, debouncedSave]);
 
   // Sync feeding
   useEffect(() => {
@@ -170,28 +191,32 @@ export default function App() {
         if (snap.exists())
           setFeeding((p) => ({ ...makeFeeding(staff), ...snap.data() }));
         else await setDoc(feedingRef, makeFeeding(staff), { merge: true });
-        unsub = onSnapshot(feedingRef, (s) => {
-          if (s.exists()) {
-            setFeeding((p) => ({ ...makeFeeding(staff), ...s.data() }));
-            setFeedingLoaded(true);
-          }
-        });
+        unsub = onSnapshot(
+          feedingRef,
+          (s) => {
+            if (s.exists()) {
+              setFeeding((p) => ({ ...makeFeeding(staff), ...s.data() }));
+              setFeedingLoaded(true);
+            }
+          },
+          (err) => console.error(err),
+        );
       } catch (e) {
         console.error(e);
       }
     })();
     return () => unsub && unsub();
   }, [feedingRef, staff]);
+
   useEffect(() => {
     if (!feedingLoaded) return;
-    const id = setTimeout(() => {
+    debouncedSave(() => {
       flagSaving();
       setDoc(feedingRef, feeding, { merge: true }).catch(console.error);
-    }, 600);
-    return () => clearTimeout(id);
-  }, [feeding, feedingLoaded, feedingRef]);
+    });
+  }, [feeding, feedingLoaded, feedingRef, debouncedSave]);
 
-  // Seed duties once, no overwrite
+  // Seed duties once + keep in sync
   useEffect(() => {
     const ref = dutiesRef(weekKey);
     let unsub;
@@ -203,7 +228,11 @@ export default function App() {
         setDutiesLoaded(true);
         unsub = onSnapshot(
           ref,
-          () => {},
+          (s) => {
+            if (s.exists()) {
+              setDuties((prev) => ({ ...makeDuties(horses), ...s.data() }));
+            }
+          },
           (err) => console.error(err),
         );
       } catch (e) {
@@ -212,13 +241,14 @@ export default function App() {
     })();
     return () => unsub && unsub();
   }, [dutiesRef, weekKey, horses]);
+
   useEffect(() => {
     if (!dutiesLoaded) return;
-    const id = setTimeout(() => {
+    debouncedSave(() => {
+      flagSaving();
       setDoc(dutiesRef(weekKey), duties, { merge: true }).catch(console.error);
-    }, 600);
-    return () => clearTimeout(id);
-  }, [duties, dutiesLoaded, dutiesRef, weekKey]);
+    });
+  }, [duties, dutiesLoaded, dutiesRef, weekKey, debouncedSave]);
 
   // Copy previous week
   const [copyOpen, setCopyOpen] = useState(false);
@@ -230,6 +260,7 @@ export default function App() {
       const snap = await getDoc(dutiesRef(prevKey));
       if (!snap.exists()) return showToast("No previous week");
       const prevData = snap.data();
+
       let next = { ...makeDuties(horses), ...duties };
       if (mode === "replace") next = { ...makeDuties(horses), ...prevData };
       if (mode === "fill") {
@@ -251,7 +282,7 @@ export default function App() {
       await setDoc(dutiesRef(weekKey), next, { merge: true });
       showToast(mode === "replace" ? "Replaced week" : "Filled blanks");
     },
-    [duties, horses, weekKey, dutiesRef, showToast, days],
+    [duties, horses, weekKey, dutiesRef, showToast],
   );
 
   // Manage Names UI state
@@ -284,6 +315,11 @@ export default function App() {
             dutiesLoaded={dutiesLoaded}
             saveBusy={saveBusy}
           />
+          {saveBusy && (
+            <span className="text-xs px-2 py-1 rounded bg-amber-100 text-amber-800">
+              Saving…
+            </span>
+          )}
           <button
             onClick={() => setShowModal(true)}
             className="hidden md:block px-3 py-2 border rounded-xl bg-white text-slate-900 dark:bg-slate-700 dark:text-slate-100"
