@@ -1,9 +1,14 @@
 // src/components/DutiesSchedule/MultiAssignCell.jsx
-import React, { useState } from 'react';
+import React, { useState } from "react";
 
-export default function MultiAssignCell({ value, onChange, options, className }) {
+export default function MultiAssignCell({
+  value,
+  onChange,
+  options,
+  className,
+}) {
   const [open, setOpen] = useState(false);
-  const selection = value || '';
+  const selection = value || "";
 
   const handleSelect = (name) => {
     onChange(name);
@@ -11,10 +16,16 @@ export default function MultiAssignCell({ value, onChange, options, className })
   };
 
   return (
-    <td className={`border p-1 min-w-[160px] ${className || ''}`}>  
-      <div className="flex items-center gap-2"> {/* increased gap for spacing */}
-        <span className={`${selection ? 'text-slate-900 dark:text-slate-100' : 'text-slate-400'}`}> {/* dark mode unchanged */}
-          {selection || 'Unassigned'}
+    <td className={`border p-1 min-w-[160px] ${className || ""}`}>
+      <div className="flex items-center gap-2">
+        {" "}
+        {/* increased gap for spacing */}
+        <span
+          className={`${selection ? "text-slate-900 dark:text-slate-100" : "text-slate-400"}`}
+        >
+          {" "}
+          {/* dark mode unchanged */}
+          {selection || "Unassigned"}
         </span>
         <button
           type="button"
@@ -37,7 +48,9 @@ export default function MultiAssignCell({ value, onChange, options, className })
             aria-modal="true"
           >
             <h4 className="font-semibold text-lg">Assign person</h4>
-            <div className="flex flex-col divide-y divide-gray-200 dark:divide-gray-700 max-h-64 overflow-auto"> {/* vertical list with dividers */}
+            <div className="flex flex-col divide-y divide-gray-200 dark:divide-gray-700 max-h-64 overflow-auto">
+              {" "}
+              {/* vertical list with dividers */}
               {options.filter(Boolean).map((name) => (
                 <button
                   key={name}
@@ -51,7 +64,7 @@ export default function MultiAssignCell({ value, onChange, options, className })
             <div className="mt-4 flex justify-end gap-3">
               <button
                 className="px-4 py-2 border rounded text-slate-700 hover:bg-gray-50"
-                onClick={() => handleSelect('')}
+                onClick={() => handleSelect("")}
               >
                 Clear
               </button>

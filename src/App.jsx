@@ -1,6 +1,12 @@
 // src/App.jsx — v4.2.5 (Final)
 
-import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  useMemo,
+  useCallback,
+} from "react";
 import { db } from "./firebase";
 import { doc, getDoc, setDoc, onSnapshot } from "firebase/firestore";
 import PwaInstallPrompt from "./components/PwaInstallPrompt.jsx";
@@ -12,11 +18,25 @@ import CloudStatus from "./components/CloudStatus";
 import { Container } from "./components/ui/UiKit";
 import FeedingSchedule from "./components/FeedingSchedule/FeedingSchedule";
 import DutiesSchedule from "./components/DutiesSchedule/DutiesSchedule";
-import { days, getStartOfWeek, formatDateLocal, formatRange } from "./utils/dates";
-import { defaultStaff, defaultHorses, defaultDutyStaff, makeFeeding, makeDuties } from "./utils/data";
+import {
+  days,
+  getStartOfWeek,
+  formatDateLocal,
+  formatRange,
+} from "./utils/dates";
+import {
+  defaultStaff,
+  defaultHorses,
+  defaultDutyStaff,
+  makeFeeding,
+  makeDuties,
+} from "./utils/data";
 
-const prefersDark = () => typeof window !== "undefined" && window.matchMedia?.("(prefers-color-scheme: dark)").matches;
-const getInitialTheme = () => localStorage.getItem("theme") || (prefersDark() ? "dark" : "light");
+const prefersDark = () =>
+  typeof window !== "undefined" &&
+  window.matchMedia?.("(prefers-color-scheme: dark)").matches;
+const getInitialTheme = () =>
+  localStorage.getItem("theme") || (prefersDark() ? "dark" : "light");
 
 function useToast() {
   const [msg, setMsg] = useState("");
@@ -52,7 +72,10 @@ export default function App() {
   const [horses, setHorses] = useState(defaultHorses);
   const [dutyStaff, setDutyStaff] = useState(defaultDutyStaff);
   const [listsLoaded, setListsLoaded] = useState(false);
-  const dutyOptions = useMemo(() => ["", ...staff, ...dutyStaff], [staff, dutyStaff]);
+  const dutyOptions = useMemo(
+    () => ["", ...staff, ...dutyStaff],
+    [staff, dutyStaff],
+  );
 
   // Feeding
   const [feeding, setFeeding] = useState(() => makeFeeding(defaultStaff));
@@ -79,7 +102,10 @@ export default function App() {
   // Firestore refs
   const listsRef = useMemo(() => doc(db, "schedules", "lists"), []);
   const feedingRef = useMemo(() => doc(db, "schedules", "feedingSchedule"), []);
-  const dutiesRef = useCallback((key) => doc(db, "schedules", `duties_${key}`), []);
+  const dutiesRef = useCallback(
+    (key) => doc(db, "schedules", `duties_${key}`),
+    [],
+  );
 
   // Sync lists
   useEffect(() => {
@@ -141,7 +167,8 @@ export default function App() {
     (async () => {
       try {
         const snap = await getDoc(feedingRef);
-        if (snap.exists()) setFeeding((p) => ({ ...makeFeeding(staff), ...snap.data() }));
+        if (snap.exists())
+          setFeeding((p) => ({ ...makeFeeding(staff), ...snap.data() }));
         else await setDoc(feedingRef, makeFeeding(staff), { merge: true });
         unsub = onSnapshot(feedingRef, (s) => {
           if (s.exists()) {
@@ -174,7 +201,11 @@ export default function App() {
         if (snap.exists()) setDuties({ ...makeDuties(horses), ...snap.data() });
         else await setDoc(ref, makeDuties(horses), { merge: true });
         setDutiesLoaded(true);
-        unsub = onSnapshot(ref, () => {}, (err) => console.error(err));
+        unsub = onSnapshot(
+          ref,
+          () => {},
+          (err) => console.error(err),
+        );
       } catch (e) {
         console.error(e);
       }
@@ -207,7 +238,10 @@ export default function App() {
           for (const t of Object.keys(prevData[h])) {
             for (const d of days) {
               if (!next[h]?.[t]?.[d] && prevData[h][t][d]) {
-                next[h] = { ...(next[h] || {}), [t]: { ...(next[h]?.[t] || {}), [d]: prevData[h][t][d] } };
+                next[h] = {
+                  ...(next[h] || {}),
+                  [t]: { ...(next[h]?.[t] || {}), [d]: prevData[h][t][d] },
+                };
               }
             }
           }
@@ -217,7 +251,7 @@ export default function App() {
       await setDoc(dutiesRef(weekKey), next, { merge: true });
       showToast(mode === "replace" ? "Replaced week" : "Filled blanks");
     },
-    [duties, horses, weekKey, dutiesRef, showToast, days]
+    [duties, horses, weekKey, dutiesRef, showToast, days],
   );
 
   // Manage Names UI state
@@ -231,52 +265,138 @@ export default function App() {
       {/* Header */}
       <header className="flex items-center justify-between px-4 py-3 shadow bg-white/90 dark:bg-slate-900/90">
         <div className="flex items-center gap-3">
-          <button className="md:hidden" onClick={() => setDrawerOpen(true)} aria-label="Menu">☰</button>
+          <button
+            className="md:hidden"
+            onClick={() => setDrawerOpen(true)}
+            aria-label="Menu"
+          >
+            ☰
+          </button>
           <span className="text-2xl font-bold">Stable Scheduler</span>
         </div>
         <div className="flex items-center gap-3">
-          <span className="px-3 py-1.5 rounded-full border bg-white dark:bg-slate-800">{weekLabel}</span>
-          <CloudStatus listsLoaded={listsLoaded} feedingLoaded={feedingLoaded} dutiesLoaded={dutiesLoaded} saveBusy={saveBusy} />
-          <button onClick={() => setShowModal(true)} className="hidden md:block px-3 py-2 border rounded-xl bg-white text-slate-900 dark:bg-slate-700 dark:text-slate-100">Manage Names</button>
-          <button onClick={() => setTheme((t) => (t === "dark" ? "light" : "dark"))} aria-label="Toggle theme" className="px-3 py-2 border rounded-xl bg-white text-slate-900 hover:bg-slate-100 dark:bg-slate-700 dark:text-slate-100">{theme === "dark" ? "☀️" : "🌙"}</button>
+          <span className="px-3 py-1.5 rounded-full border bg-white dark:bg-slate-800">
+            {weekLabel}
+          </span>
+          <CloudStatus
+            listsLoaded={listsLoaded}
+            feedingLoaded={feedingLoaded}
+            dutiesLoaded={dutiesLoaded}
+            saveBusy={saveBusy}
+          />
+          <button
+            onClick={() => setShowModal(true)}
+            className="hidden md:block px-3 py-2 border rounded-xl bg-white text-slate-900 dark:bg-slate-700 dark:text-slate-100"
+          >
+            Manage Names
+          </button>
+          <button
+            onClick={() => setTheme((t) => (t === "dark" ? "light" : "dark"))}
+            aria-label="Toggle theme"
+            className="px-3 py-2 border rounded-xl bg-white text-slate-900 hover:bg-slate-100 dark:bg-slate-700 dark:text-slate-100"
+          >
+            {theme === "dark" ? "☀️" : "🌙"}
+          </button>
         </div>
       </header>
 
       {/* Mobile Drawer */}
       <Drawer open={drawerOpen} onClose={() => setDrawerOpen(false)}>
-        <button onClick={() => { setShowModal(true); setDrawerOpen(false); }} className="block px-3 py-2 border rounded-xl bg-white text-slate-900 dark:bg-slate-700 dark:text-slate-100">Manage Names</button>
-        <button onClick={() => setTheme((t) => (t === "dark" ? "light" : "dark"))} className="block px-3 py-2 border rounded-xl bg-white text-slate-900 dark:bg-slate-700 dark:text-slate-100">{theme === "dark" ? "Light mode" : "Dark mode"}</button>
+        <button
+          onClick={() => {
+            setShowModal(true);
+            setDrawerOpen(false);
+          }}
+          className="block px-3 py-2 border rounded-xl bg-white text-slate-900 dark:bg-slate-700 dark:text-slate-100"
+        >
+          Manage Names
+        </button>
+        <button
+          onClick={() => setTheme((t) => (t === "dark" ? "light" : "dark"))}
+          className="block px-3 py-2 border rounded-xl bg-white text-slate-900 dark:bg-slate-700 dark:text-slate-100"
+        >
+          {theme === "dark" ? "Light mode" : "Dark mode"}
+        </button>
       </Drawer>
 
       {/* Week Selector */}
-      <WeekSelector setWeekStart={setWeekStart} openCopyConfirm={openCopyConfirm} />
+      <WeekSelector
+        setWeekStart={setWeekStart}
+        openCopyConfirm={openCopyConfirm}
+      />
 
       {/* Main Content */}
       <Container className="space-y-10">
-        <FeedingSchedule staffList={staff} data={feeding} setData={setFeeding} />
-        <DutiesSchedule horses={horses} data={duties} setData={setDuties} weekLabel={weekLabel} dutyOptions={dutyOptions} />
+        <FeedingSchedule
+          staffList={staff}
+          data={feeding}
+          setData={setFeeding}
+        />
+        <DutiesSchedule
+          horses={horses}
+          data={duties}
+          setData={setDuties}
+          weekLabel={weekLabel}
+          dutyOptions={dutyOptions}
+        />
       </Container>
 
       {/* Manage Names Modal */}
       <Modal open={showModal} onClose={() => setShowModal(false)}>
-      <h2 id="edit-names-title" className="text-xl font-bold mb-4">Edit Names</h2>
-      <EditableList title="Owners" items={staff} setItems={setStaff} placeholder="e.g., Alex" />
-      <EditableList title="Helpers" items={dutyStaff} setItems={setDutyStaff} placeholder="e.g., Bev" />
-      <EditableList title="Horses" items={horses} setItems={setHorses} placeholder="e.g., Bella" />
+        <h2 id="edit-names-title" className="text-xl font-bold mb-4">
+          Edit Names
+        </h2>
+        <EditableList
+          title="Owners"
+          items={staff}
+          setItems={setStaff}
+          placeholder="e.g., Alex"
+        />
+        <EditableList
+          title="Helpers"
+          items={dutyStaff}
+          setItems={setDutyStaff}
+          placeholder="e.g., Bev"
+        />
+        <EditableList
+          title="Horses"
+          items={horses}
+          setItems={setHorses}
+          placeholder="e.g., Bella"
+        />
       </Modal>
 
       {/* Copy Previous Week Modal */}
       <Modal open={copyOpen} onClose={() => setCopyOpen(false)}>
-        <h2 id="copy-week-title" className="text-lg font-semibold mb-2">Copy previous week?</h2>
-        <p className="text-sm text-slate-700 dark:text-slate-300 mb-4">This can overwrite the current week’s duties.</p>
+        <h2 id="copy-week-title" className="text-lg font-semibold mb-2">
+          Copy previous week?
+        </h2>
+        <p className="text-sm text-slate-700 dark:text-slate-300 mb-4">
+          This can overwrite the current week’s duties.
+        </p>
         <div className="flex flex-col gap-2">
-          <button className="px-3 py-2 rounded bg-emerald-600 text-white" onClick={() => doCopy("replace")}>Replace current week</button>
-          <button className="px-3 py-2 rounded border" onClick={() => doCopy("fill")}>Fill empty cells only</button>
-          <button className="px-3 py-2 rounded border" onClick={() => setCopyOpen(false)}>Cancel</button>
+          <button
+            className="px-3 py-2 rounded bg-emerald-600 text-white"
+            onClick={() => doCopy("replace")}
+          >
+            Replace current week
+          </button>
+          <button
+            className="px-3 py-2 rounded border"
+            onClick={() => doCopy("fill")}
+          >
+            Fill empty cells only
+          </button>
+          <button
+            className="px-3 py-2 rounded border"
+            onClick={() => setCopyOpen(false)}
+          >
+            Cancel
+          </button>
         </div>
       </Modal>
 
       {Toast}
-      </div>
-    );
+    </div>
+  );
 }

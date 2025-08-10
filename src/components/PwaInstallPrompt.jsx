@@ -1,10 +1,17 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from "react";
 
 function isStandalone() {
-  return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+  return (
+    window.matchMedia("(display-mode: standalone)").matches ||
+    window.navigator.standalone === true
+  );
 }
-function isiOS() { return /iphone|ipad|ipod/i.test(navigator.userAgent); }
-function isSafari() { return /^((?!chrome|android).)*safari/i.test(navigator.userAgent); }
+function isiOS() {
+  return /iphone|ipad|ipod/i.test(navigator.userAgent);
+}
+function isSafari() {
+  return /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+}
 
 export default function PwaInstallPrompt() {
   const [deferred, setDeferred] = useState(null);
@@ -17,13 +24,16 @@ export default function PwaInstallPrompt() {
       setDeferred(e);
       setShow(true);
     };
-    const onInstalled = () => { setInstalled(true); setShow(false); };
+    const onInstalled = () => {
+      setInstalled(true);
+      setShow(false);
+    };
 
-    window.addEventListener('beforeinstallprompt', onBIP);
-    window.addEventListener('appinstalled', onInstalled);
+    window.addEventListener("beforeinstallprompt", onBIP);
+    window.addEventListener("appinstalled", onInstalled);
     return () => {
-      window.removeEventListener('beforeinstallprompt', onBIP);
-      window.removeEventListener('appinstalled', onInstalled);
+      window.removeEventListener("beforeinstallprompt", onBIP);
+      window.removeEventListener("appinstalled", onInstalled);
     };
   }, []);
 
@@ -43,21 +53,33 @@ export default function PwaInstallPrompt() {
               onClick={async () => {
                 deferred.prompt();
                 const { outcome } = await deferred.userChoice;
-                console.log('[PWA] userChoice', outcome);
+                console.log("[PWA] userChoice", outcome);
                 setDeferred(null);
                 setShow(false);
               }}
-            >Install</button>
-            <button className="px-2 py-1" onClick={() => setShow(false)}>Not now</button>
+            >
+              Install
+            </button>
+            <button className="px-2 py-1" onClick={() => setShow(false)}>
+              Not now
+            </button>
           </div>
         )}
 
         {showIOSHint && (
           <div>
             <div className="font-medium mb-1">Add to Home Screen</div>
-            <div>On iPhone/iPad: tap <strong>Share</strong> → <strong>Add to Home Screen</strong>.</div>
+            <div>
+              On iPhone/iPad: tap <strong>Share</strong> →{" "}
+              <strong>Add to Home Screen</strong>.
+            </div>
             <div className="mt-2 text-right">
-              <button className="px-2 py-1 border rounded" onClick={() => setShow(false)}>OK</button>
+              <button
+                className="px-2 py-1 border rounded"
+                onClick={() => setShow(false)}
+              >
+                OK
+              </button>
             </div>
           </div>
         )}

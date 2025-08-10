@@ -21,7 +21,12 @@ function cx(...cls) {
 // main page content.  It also gives you an easy hook (className prop) for any
 // per-page tweaks.
 export const Container = ({ children, className }) => (
-  <div className={cx("mx-auto p-4 md:px-10 lg:px-24 xl:px-32 max-w-screen-xl", className)}>
+  <div
+    className={cx(
+      "mx-auto p-4 md:px-10 lg:px-24 xl:px-32 max-w-screen-xl",
+      className,
+    )}
+  >
     {children}
   </div>
 );
@@ -40,7 +45,13 @@ export const Container = ({ children, className }) => (
 // accent  – "amber" | "emerald" (choose palette for the heading, default amber)
 // right   – Optional ReactNode rendered on the right of the header row.
 // className – Extra classes for the outer <section> element.
-export function SectionCard({ title, accent = "amber", right, children, className }) {
+export function SectionCard({
+  title,
+  accent = "amber",
+  right,
+  children,
+  className,
+}) {
   const headingColour =
     accent === "emerald"
       ? "text-emerald-700 dark:text-emerald-300"
@@ -50,7 +61,7 @@ export function SectionCard({ title, accent = "amber", right, children, classNam
     <section
       className={cx(
         "bg-white/95 dark:bg-slate-800 rounded-2xl shadow p-6 border border-slate-200 dark:border-slate-700 mb-12",
-        className
+        className,
       )}
     >
       <div className="flex items-baseline justify-between mb-4">
@@ -74,11 +85,12 @@ export const IconButton = ({ icon: Icon, label, className, ...rest }) => (
   <button
     className={cx(
       "inline-flex items-center gap-1 px-3 py-2 rounded-md border bg-white dark:bg-slate-700 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-600 transition-colors",
-      className
+      className,
     )}
     {...rest}
   >
-    {Icon && <Icon className="w-4 h-4" aria-hidden="true" />} <span>{label}</span>
+    {Icon && <Icon className="w-4 h-4" aria-hidden="true" />}{" "}
+    <span>{label}</span>
   </button>
 );
 
