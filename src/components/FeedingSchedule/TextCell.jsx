@@ -14,8 +14,6 @@ export default function TextCell({
 }) {
   const title =
     "Enter a time as HH:MM (e.g., 07:30, 20:00) or type a note like ‘On Holiday’.";
-  const timeRef = useRef(null);
-
   return (
     <div className={`flex items-stretch gap-1 ${className || ""}`}>
       <input
