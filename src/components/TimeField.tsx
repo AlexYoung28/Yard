@@ -1,33 +1,50 @@
-import React from "react";
+import { useId } from "react";
 
-type Props = {
+export type TimeFieldProps = {
   value?: string;
   onChange: (v: string) => void;
   label?: string;
   id?: string;
+  disabled?: boolean;
+  /** enforced only when value !== "" so clearing works on iOS */
   required?: boolean;
+  className?: string;
 };
 
-/** Clearable <input type="time" /> — fixes iPhone/Safari not providing a clear control. */
-export function TimeField({ value, onChange, label, id, required }: Props) {
-  const inputId = id ?? "time-" + Math.random().toString(36).slice(2);
+export function TimeField({
+  value = "",
+  onChange,
+  label,
+  id,
+  disabled,
+  required,
+  className,
+}: TimeFieldProps) {
+  // Call the hook unconditionally, then choose which id to use.
+  const generatedId = useId();
+  const inputId = id ?? generatedId;
+
   return (
-    <div className="flex items-center gap-2">
+    <div className={`flex items-center gap-2 ${className ?? ""}`}>
       {label && (
         <label htmlFor={inputId} className="text-sm">
           {label}
         </label>
       )}
+
       <input
         id={inputId}
         type="time"
-        value={value ?? ""}
+        value={value}
         onChange={(e) => onChange(e.target.value)}
-        required={required}
         className="border rounded px-2 py-1"
         inputMode="numeric"
+        required={!!required && value !== ""} // allow clearing to ""
+        disabled={disabled}
+        aria-label={label ?? "Time"}
       />
-      {value && (
+
+      {value !== "" && (
         <button
           type="button"
           className="border rounded px-2 py-1 text-sm"
