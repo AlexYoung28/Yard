@@ -1,5 +1,14 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { TimeField } from "../TimeField.tsx";
+
+const isTime = (v) => typeof v === "string" && /^\d{1,2}:\d{2}$/.test(v);
+const normalizeTime = (raw) => {
+  const m = (raw || "").trim().match(/^(\d{1,2}):(\d{1,2})$/);
+  if (!m) return null;
+  const h = Math.max(0, Math.min(23, parseInt(m[1], 10)));
+  const mm = Math.max(0, Math.min(59, parseInt(m[2], 10)));
+  return `${String(h).padStart(2, "0")}:${String(mm).padStart(2, "0")}`;
+};
 
 export default function TextCell({
   value,
@@ -8,101 +17,147 @@ export default function TextCell({
   className,
   onFocus,
 }) {
-  const isTime = (v) => typeof v === "string" && /^\d{1,2}:\d{2}$/.test(v);
-  const [mode, setMode] = useState(isTime(value) ? "time" : "note");
+  const [open, setOpen] = useState(false);
+  const initialMode = isTime(value) ? "time" : "note";
+  const [mode, setMode] = useState(initialMode);
+  const [timeVal, setTimeVal] = useState(
+    isTime(value) ? (normalizeTime(value) ?? "") : "",
+  );
+  const [noteVal, setNoteVal] = useState(!isTime(value) ? (value ?? "") : "");
 
-  // keep mode in sync if parent changes value externally
   useEffect(() => {
-    setMode(isTime(value) ? "time" : "note");
+    const t = isTime(value);
+    setMode(t ? "time" : "note");
+    setTimeVal(t ? (normalizeTime(value) ?? "") : "");
+    setNoteVal(!t ? (value ?? "") : "");
   }, [value]);
 
-  const normalizeTime = (raw) => {
-    const m = (raw || "").trim().match(/^(\d{1,2}):(\d{1,2})$/);
-    if (!m) return null;
-    const h = Math.max(0, Math.min(23, parseInt(m[1], 10)));
-    const mm = Math.max(0, Math.min(59, parseInt(m[2], 10)));
-    return `${String(h).padStart(2, "0")}:${String(mm).padStart(2, "0")}`;
-  };
+  const label = useMemo(() => {
+    if (isTime(value)) return normalizeTime(value) ?? "";
+    const txt = (value || "").trim();
+    return txt || placeholder || "Set";
+  }, [value, placeholder]);
 
-  const title =
-    "Enter HH:MM (e.g., 07:30, 20:00) or type a note like ‘On Holiday’.";
+  function save() {
+    if (mode === "time") {
+      const fixed = normalizeTime(timeVal || "");
+      onChange(fixed || ""); // empty if invalid/blank
+    } else {
+      const note = (noteVal || "").trim();
+      onChange(note);
+    }
+    setOpen(false);
+  }
+
+  function removeValue() {
+    setTimeVal("");
+    setNoteVal("");
+    onChange("");
+    setOpen(false);
+  }
 
   return (
-    <div className={`flex items-stretch gap-2 ${className || ""}`}>
-      {mode === "time" ? (
-        <>
-          <TimeField
-            value={isTime(value) ? (normalizeTime(value) ?? "") : ""}
-            onChange={(t) => onChange(t)}
-            aria-label="Choose a time"
-          />
-          <button
-            type="button"
-            className="px-2 py-1 border rounded text-sm"
-            onClick={() => setMode("note")}
-            aria-label="Switch to note"
-            title="Switch to note"
-          >
-            Note
-          </button>
-        </>
-      ) : (
-        <>
-          <input
-            type="text"
-            className="flex-1 p-2 rounded bg-white text-slate-900 dark:bg-slate-800 dark:text-slate-100 outline-none focus:ring-2 focus:ring-amber-400"
-            value={value ?? ""}
-            onChange={(e) => onChange(e.target.value)}
-            onFocus={onFocus}
-            placeholder={placeholder}
-            inputMode="numeric"
-            list="timeHints"
-            pattern="^(?:\\d{1,2}:\\d{2}|On Holiday)?$"
-            title={title}
-            enterKeyHint="done"
-            autoCorrect="off"
-            autoCapitalize="off"
-            spellCheck={false}
-            onInvalid={(e) =>
-              e.target.setCustomValidity(
-                "Use HH:MM (e.g., 07:30) or ‘On Holiday’",
-              )
-            }
-            onInput={(e) => e.currentTarget.setCustomValidity("")}
-            onBlur={(e) => {
-              const v = (e.target.value || "").trim();
-              if (!v) return; // allow empty
-              if (/^On Holiday$/i.test(v)) {
-                onChange("On Holiday");
-                return;
-              }
-              const fixed = normalizeTime(v);
-              if (fixed) {
-                onChange(fixed);
-                setMode("time"); // switch to time after valid time entry
-              }
-            }}
-          />
-          <button
-            type="button"
-            className="px-2 py-1 border rounded text-sm"
-            onClick={() => setMode("time")}
-            aria-label="Switch to time"
-            title="Switch to time"
-          >
-            Time
-          </button>
-        </>
-      )}
+    <>
+      {/* Cell button (large tap target) */}
+      <button
+        type="button"
+        className={`w-full min-h-[44px] px-3 py-2 rounded border text-left bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 ${className || ""}`}
+        onClick={() => {
+          onFocus?.();
+          setOpen(true);
+        }}
+        title="Edit"
+      >
+        <span
+          className={label === (placeholder || "Set") ? "text-slate-400" : ""}
+        >
+          {label}
+        </span>
+      </button>
 
-      <datalist id="timeHints">
-        <option value="On Holiday" />
-        <option value="06:30" />
-        <option value="07:00" />
-        <option value="07:30" />
-        <option value="19:00" />
-        <option value="20:00" />
-      </datalist>
-    </div>
+      {/* Editor overlay (dialog on desktop, sheet on mobile) */}
+      {open && (
+        <div
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center"
+          role="dialog"
+          aria-modal="true"
+        >
+          {/* backdrop */}
+          <button
+            type="button"
+            className="absolute inset-0 bg-black/40"
+            aria-label="Close"
+            onClick={() => setOpen(false)}
+          />
+          {/* panel */}
+          <div className="relative w-full sm:w-[520px] max-w-[96vw] rounded-t-2xl sm:rounded-2xl bg-white dark:bg-slate-800 p-4 shadow-xl">
+            <div className="flex items-center gap-2 mb-3">
+              <button
+                className={`px-3 py-1.5 rounded border text-sm ${mode === "time" ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900" : ""}`}
+                onClick={() => setMode("time")}
+              >
+                Time
+              </button>
+              <button
+                className={`px-3 py-1.5 rounded border text-sm ${mode === "note" ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900" : ""}`}
+                onClick={() => setMode("note")}
+              >
+                Note
+              </button>
+            </div>
+
+            {mode === "time" ? (
+              <TimeField
+                value={timeVal}
+                onChange={(v) => setTimeVal(v)}
+                className="mb-4"
+              />
+            ) : (
+              <div className="mb-4">
+                <label className="block text-sm mb-1">Note</label>
+                <input
+                  type="text"
+                  value={noteVal}
+                  onChange={(e) => setNoteVal(e.target.value)}
+                  placeholder="e.g., On Holiday"
+                  className="w-full border rounded px-3 py-2"
+                  enterKeyHint="done"
+                  autoCorrect="off"
+                  autoCapitalize="off"
+                  spellCheck={false}
+                />
+              </div>
+            )}
+
+            <div className="flex items-center justify-between gap-2">
+              <button
+                type="button"
+                className="px-3 py-2 rounded border"
+                onClick={() => setOpen(false)}
+              >
+                Cancel
+              </button>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  className="px-3 py-2 rounded border"
+                  onClick={removeValue}
+                  title="Remove value"
+                >
+                  Remove
+                </button>
+                <button
+                  type="button"
+                  className="px-3 py-2 rounded bg-emerald-600 text-white"
+                  onClick={save}
+                >
+                  Save
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }

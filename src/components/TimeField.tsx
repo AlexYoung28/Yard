@@ -6,7 +6,7 @@ export type TimeFieldProps = {
   label?: string;
   id?: string;
   disabled?: boolean;
-  /** enforced only when value !== "" so clearing works on iOS */
+  /** Enforced only when value !== "" so clearing works on iOS. */
   required?: boolean;
   className?: string;
 };
@@ -20,7 +20,7 @@ export function TimeField({
   required,
   className,
 }: TimeFieldProps) {
-  // Call the hook unconditionally, then choose which id to use.
+  // call hook unconditionally
   const generatedId = useId();
   const inputId = id ?? generatedId;
 
@@ -31,25 +31,24 @@ export function TimeField({
           {label}
         </label>
       )}
-
       <input
         id={inputId}
         type="time"
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="border rounded px-2 py-1"
+        className="border rounded px-3 py-2 w-[9.5rem] min-h-[40px]"
         inputMode="numeric"
-        required={!!required && value !== ""} // allow clearing to ""
+        required={!!required && value !== ""}
         disabled={disabled}
         aria-label={label ?? "Time"}
       />
-
       {value !== "" && (
         <button
           type="button"
-          className="border rounded px-2 py-1 text-sm"
+          className="border rounded px-3 py-2 text-sm min-h-[40px]"
           onClick={() => onChange("")}
-          aria-label="Clear time"
+          aria-label="Remove time"
+          title="Remove time"
         >
           Clear
         </button>
