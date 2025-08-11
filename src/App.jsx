@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { db } from "./firebase";
 import { doc, getDoc, setDoc, onSnapshot } from "firebase/firestore";
-import PwaInstallPrompt from "./components/PwaInstallPrompt.jsx";
+import InstallAppButton from "./components/InstallAppButton.jsx";
 import Modal from "./components/ui/Modal";
 import Drawer from "./components/ui/Drawer";
 import EditableList from "./components/ui/EditableList";
@@ -291,7 +291,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-white via-rose-50 to-white dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 text-slate-900 dark:text-slate-200 transition-colors duration-300">
-      <PwaInstallPrompt />
+      <InstallAppButton />
 
       {/* Header */}
       <header className="flex items-center justify-between px-4 py-3 shadow bg-white/90 dark:bg-slate-900/90">
