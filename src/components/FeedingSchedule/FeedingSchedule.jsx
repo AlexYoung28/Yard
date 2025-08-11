@@ -5,6 +5,7 @@ import useScrollShadows from "../../hooks/useScrollShadows";
 import ScrollIndicators from "../ui/ScrollIndicators";
 import { SectionCard } from "../ui/UiKit";
 import TextCell from "./TextCell";
+import { TimeField } from "../TimeField.tsx";
 import { days } from "../../utils/dates";
 import { feedingTypes, highlight } from "../../utils/data";
 
@@ -122,21 +123,16 @@ export default function FeedingSchedule({ staffList, data, setData }) {
                   <span className="font-medium text-base">{`${staffName} ${t.label}`}</span>
                   <span>{isOpen ? "−" : "+"}</span>
                 </button>
-                {isOpen && (
-                  <div className="bg-white dark:bg-gray-700 p-4">
-                    <div className="flex items-center gap-3">
-                      <span className="w-20 text-sm">{dayMobile}:</span>
-                      <input
-                        type="time"
-                        className="flex-1 px-3 py-2 border rounded"
-                        value={data[staffName]?.[t.key]?.[dayMobile] || ""}
-                        onChange={(e) =>
-                          change(staffName, t.key, dayMobile, e.target.value)
-                        }
-                      />
-                    </div>
-                  </div>
-                )}
+                <TimeField
+                  value={
+                    /^\d{1,2}:\d{2}$/.test(
+                      data[staffName]?.[t.key]?.[dayMobile] || "",
+                    )
+                      ? data[staffName]?.[t.key]?.[dayMobile] || ""
+                      : ""
+                  }
+                  onChange={(tval) => change(staffName, t.key, dayMobile, tval)}
+                />
               </div>
             );
           }),
